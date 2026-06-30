@@ -1,0 +1,54 @@
+/* styles/globals.css. Tiffinlo web app v2 */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  --green: #20503B;
+  --forest: #173A2A;
+  --sage: #7E9A7E;
+  --cream: #F4EFE3;
+  --cream-soft: #FAF7F0;
+  --clay: #C36A43;
+  --clay-light: #E0966B;
+  --ink: #1A2620;
+  --line: rgba(32, 80, 59, 0.14);
+  --serif: 'Fraunces', Georgia, serif;
+  --sans: 'DM Sans', system-ui, sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--sans);
+  color: var(--ink);
+  background: var(--cream-soft);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+a { color: inherit; text-decoration: none; }
+button { font-family: var(--sans); }
+input, select, textarea { font-family: var(--sans); }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--sage); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--green); }
+::selection { background: var(--green); color: var(--cream); }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Primary CTA pill, used across pages */
+.cta { display: inline-flex; align-items: center; gap: 10px; background: var(--clay); color: #fff; font-weight: 500; font-size: 16px; padding: 15px 30px; border-radius: 999px; transition: all 0.2s; border: none; cursor: pointer; }
+.cta:hover { background: #a8552f; transform: translateY(-2px); }
+.cta .food-icon { display: inline-block; }
+.cta:hover .food-icon { animation: spin-food 0.8s ease-in-out infinite; }
+@keyframes spin-food { 0%, 100% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(12deg) scale(1.15); } }
+
+/* Back link used across pages */
+.backlink { background: none; border: none; color: var(--sage); font-size: 14px; cursor: pointer; padding: 6px 0; margin-bottom: 10px; display: inline-flex; align-items: center; gap: 4px; font-family: var(--sans); }
+.backlink:hover { color: var(--green); }
+
+@media (max-width: 480px) { html { font-size: 15px; } }
