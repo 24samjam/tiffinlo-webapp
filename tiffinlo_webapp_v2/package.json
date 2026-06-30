@@ -1,26 +1,23 @@
 {
   "name": "tiffinlo-web",
   "version": "2.0.0",
-  "description": "Tiffinlo. ghar ka khana, roz. Premium home style tiffin subscription platform.",
-  "private": true,
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "^14.1.0",
+    "next": "^14.2.35",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "firebase": "^10.12.0"
   },
   "devDependencies": {
-    "eslint": "^8.56.0",
-    "eslint-config-next": "^14.1.0"
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.35"
   },
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
+    "node": ">=18.0.0"
   }
 }
