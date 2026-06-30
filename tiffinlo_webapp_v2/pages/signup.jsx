@@ -29,6 +29,17 @@ function Avatar() {
   );
 }
 
+// Friendly, human messages for the Firebase error codes we actually hit.
+function friendlyError(err) {
+  const code = (err && err.code) || '';
+  if (code === 'auth/too-many-requests') return 'Too many tries from this number for now. Please wait a few minutes and try again.';
+  if (code === 'auth/invalid-phone-number') return 'That phone number does not look right. Please check and try again.';
+  if (code === 'auth/quota-exceeded') return 'We are a little busy right now. Please try again in a moment.';
+  if (code === 'auth/captcha-check-failed') return 'Verification check failed. Please refresh the page and try once more.';
+  if (code === 'auth/network-request-failed') return 'Network hiccup. Please check your connection and try again.';
+  return (err && err.message) || 'Could not send the code. Please try again.';
+}
+
 export default function Signup() {
   const router = useRouter();
   const [step, setStep] = useState('phone');
@@ -38,31 +49,79 @@ export default function Signup() {
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [cooldown, setCooldown] = useState(0);
   const confirmRef = useRef(null);
+  const recaptchaRef = useRef(null);
 
+  // Build a clean, single-use reCAPTCHA verifier. We always tear down any
+  // previous instance AND wipe the container so grecaptcha never sees a
+  // div that "already has a widget" rendered in it. This is what fixes the
+  // "reCAPTCHA has already been rendered in this element" error.
   const setupRecaptcha = () => {
-    if (typeof window === 'undefined') return;
-    if (!window._recaptcha) {
-      window._recaptcha = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' });
+    if (typeof window === 'undefined') return null;
+    if (recaptchaRef.current) {
+      try { recaptchaRef.current.clear(); } catch (e) {}
+      recaptchaRef.current = null;
     }
-    return window._recaptcha;
+    const container = document.getElementById('recaptcha-container');
+    if (container) container.innerHTML = '';
+    recaptchaRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' });
+    return recaptchaRef.current;
+  };
+
+  // Tear the verifier down when the user leaves this page (handles the
+  // Back button and any client-side navigation away from signup).
+  useEffect(() => {
+    return () => {
+      if (recaptchaRef.current) {
+        try { recaptchaRef.current.clear(); } catch (e) {}
+        recaptchaRef.current = null;
+      }
+    };
+  }, []);
+
+  // Resend cooldown ticker.
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
+  // Shared core used by both the first send and the resend.
+  const requestOtp = async () => {
+    const verifier = setupRecaptcha();
+    if (!verifier) throw new Error('Could not start verification. Please refresh and try again.');
+    confirmRef.current = await signInWithPhoneNumber(auth, '+91' + phone, verifier);
   };
 
   const sendOtp = async (e) => {
     e.preventDefault();
     setError('');
+    // Validate in the same order the fields appear on screen.
     if (!name.trim()) { setError('Please tell us your name first.'); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError('Please enter a valid email address.'); return; }
     if (phone.length !== 10) { setError('Please enter a valid 10 digit number.'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError('Please enter a valid email address.'); return; }
+    if (!auth) { setError('Backend not connected yet. Add Firebase keys, see SETUP_BACKEND.md'); return; }
     setLoading(true);
     try {
-      if (!auth) { setError('Backend not connected yet. Add Firebase keys, see SETUP_BACKEND.md'); setLoading(false); return; }
-      const verifier = setupRecaptcha();
-      confirmRef.current = await signInWithPhoneNumber(auth, '+91' + phone, verifier);
+      await requestOtp();
       setStep('otp');
+      setCooldown(30);
     } catch (err) {
-      setError(err.message || 'Could not send the code. Please try again.');
-      if (window._recaptcha) { try { window._recaptcha.clear(); } catch (e) {} window._recaptcha = null; }
+      setError(friendlyError(err));
+    }
+    setLoading(false);
+  };
+
+  const resend = async () => {
+    if (cooldown > 0 || loading) return;
+    setError('');
+    setLoading(true);
+    try {
+      await requestOtp();
+      setCooldown(30);
+    } catch (err) {
+      setError(friendlyError(err));
     }
     setLoading(false);
   };
@@ -91,6 +150,16 @@ export default function Signup() {
     setLoading(false);
   };
 
+  const goBack = () => {
+    setError('');
+    if (step === 'otp') {
+      setOtp('');
+      setStep('phone');
+    } else {
+      router.back();
+    }
+  };
+
   return (
     <main className="main">
       <style jsx>{`
@@ -109,12 +178,15 @@ export default function Signup() {
         .btn:hover:not(:disabled) { background: var(--forest); }
         .btn:disabled { opacity: 0.45; cursor: not-allowed; }
         .note { font-size: 12px; color: var(--sage); text-align: center; margin-top: 16px; }
+        .resend { text-align: center; margin-top: 16px; font-size: 14px; color: #5a665d; }
+        .resend button { background: none; border: none; color: var(--clay); font-weight: 500; cursor: pointer; font-size: 14px; padding: 0; }
+        .resend button:disabled { color: var(--sage); cursor: not-allowed; }
         .link { text-align: center; margin-top: 18px; font-size: 14px; color: #5a665d; }
         .link a { color: var(--clay); font-weight: 500; }
         .error { background: #fdeceb; color: #b3322c; padding: 10px 13px; border-radius: 10px; font-size: 14px; margin-bottom: 16px; }
       `}</style>
       <div className="container">
-        <button className="backlink" onClick={() => (step === 'otp' ? setStep('phone') : router.back())}>‹ Back</button>
+        <button className="backlink" onClick={goBack}>‹ Back</button>
         <div className="speaker"><Avatar /><span className="em">tiffinlo</span></div>
         {step === 'phone' ? (
           <>
@@ -155,6 +227,12 @@ export default function Signup() {
               <button type="submit" className="btn" disabled={loading}>{loading ? 'Verifying...' : 'Verify and continue'}</button>
               <p className="note">This is what keeps your trial yours. One account per number.</p>
             </form>
+            <p className="resend">
+              Did not get it?{' '}
+              <button onClick={resend} disabled={cooldown > 0 || loading}>
+                {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}
+              </button>
+            </p>
           </>
         )}
       </div>
